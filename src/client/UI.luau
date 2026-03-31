@@ -1,6 +1,9 @@
 --!strict
 
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
@@ -53,6 +56,9 @@ local refs: {
 	invList: ScrollingFrame,
 	shopFrame: Frame,
 	shopScroll: ScrollingFrame,
+	castPanel: Frame,
+	invPanel: Frame,
+	shopToggle: TextButton,
 }?
 
 local lastCooldownEnd = 0
@@ -287,9 +293,14 @@ function UI.mount()
 	root.BackgroundTransparency = 1
 	root.Parent = gui
 
+	-- Top HUD card: half the width of a full-bleed bar with the same total L+R margin budget, centered.
+	local topPadL = 56
+	local topPadR = 20
+	local topMarginTotal = topPadL + topPadR
 	local top = Instance.new("Frame")
-	top.Size = UDim2.new(1, -40, 0, 108)
-	top.Position = UDim2.new(0, 20, 0, 16)
+	top.AnchorPoint = Vector2.new(0.5, 0)
+	top.Size = UDim2.new(0.5, -topMarginTotal / 2, 0, 64)
+	top.Position = UDim2.new(0.5, 0, 0, 16)
 	top.BackgroundColor3 = palette.bg
 	top.BackgroundTransparency = 0.15
 	top.BorderSizePixel = 0
@@ -297,23 +308,14 @@ function UI.mount()
 	corner(12).Parent = top
 	stroke(1).Parent = top
 
-	local title = Instance.new("TextLabel")
-	title.BackgroundTransparency = 1
-	title.Size = UDim2.new(0.5, 0, 0, 28)
-	title.Position = UDim2.new(0, 16, 0, 10)
-	title.Font = Enum.Font.GothamBold
-	title.TextSize = 22
-	title.TextXAlignment = Enum.TextXAlignment.Left
-	title.TextColor3 = palette.accent
-	title.Text = Config.GAME_NAME
-	title.Parent = top
-
+	local hudRowY = 11
 	local money = Instance.new("TextLabel")
 	money.BackgroundTransparency = 1
-	money.Size = UDim2.new(0.45, -20, 0, 24)
-	money.Position = UDim2.new(0.55, 0, 0, 12)
+	money.AnchorPoint = Vector2.new(1, 0)
+	money.Size = UDim2.new(0, 59, 0, 16)
+	money.Position = UDim2.new(1, -12, 0, hudRowY)
 	money.Font = Enum.Font.GothamBold
-	money.TextSize = 20
+	money.TextSize = 12
 	money.TextColor3 = palette.good
 	money.TextXAlignment = Enum.TextXAlignment.Right
 	money.Text = formatMoney(0)
@@ -321,22 +323,24 @@ function UI.mount()
 
 	local level = Instance.new("TextLabel")
 	level.BackgroundTransparency = 1
-	level.Size = UDim2.new(0.35, 0, 0, 20)
-	level.Position = UDim2.new(0, 16, 0, 44)
+	level.AnchorPoint = Vector2.new(0.5, 0)
+	level.Size = UDim2.new(0, 48, 0, 16)
+	level.Position = UDim2.new(0.5, 0, 0, hudRowY)
 	level.Font = Enum.Font.GothamMedium
-	level.TextSize = 16
+	level.TextSize = 12
 	level.TextColor3 = palette.text
-	level.TextXAlignment = Enum.TextXAlignment.Left
+	level.TextXAlignment = Enum.TextXAlignment.Center
 	level.Text = "Level 1"
 	level.Parent = top
 
+	local xpRowY = 31
 	local xpBack = Instance.new("Frame")
 	xpBack.BackgroundColor3 = palette.panel
 	xpBack.BorderSizePixel = 0
-	xpBack.Size = UDim2.new(1, -32, 0, 14)
-	xpBack.Position = UDim2.new(0, 16, 0, 72)
+	xpBack.Size = UDim2.new(1, -24, 0, 10)
+	xpBack.Position = UDim2.new(0, 12, 0, xpRowY)
 	xpBack.Parent = top
-	corner(7).Parent = xpBack
+	corner(5).Parent = xpBack
 
 	local xpFill = Instance.new("Frame")
 	xpFill.Name = "Fill"
@@ -344,68 +348,160 @@ function UI.mount()
 	xpFill.BorderSizePixel = 0
 	xpFill.Size = UDim2.new(0, 0, 1, 0)
 	xpFill.Parent = xpBack
-	corner(7).Parent = xpFill
+	corner(5).Parent = xpFill
 
 	local xpLabel = Instance.new("TextLabel")
 	xpLabel.BackgroundTransparency = 1
-	xpLabel.Size = UDim2.new(1, 0, 0, 18)
-	xpLabel.Position = UDim2.new(0, 0, 0, 88)
+	xpLabel.Size = UDim2.new(1, 0, 0, 13)
+	xpLabel.Position = UDim2.new(0, 0, 0, 44)
 	xpLabel.Font = Enum.Font.Gotham
-	xpLabel.TextSize = 13
+	xpLabel.TextSize = 11
 	xpLabel.TextColor3 = palette.muted
 	xpLabel.Text = "0 / 100 XP"
 	xpLabel.Parent = top
 
+	local castW, castH = 252, 134
 	local mid = Instance.new("Frame")
-	mid.Size = UDim2.new(0, 320, 0, 200)
-	mid.Position = UDim2.new(0.5, -160, 0.42, -100)
-	mid.BackgroundColor3 = palette.bg
-	mid.BackgroundTransparency = 0.1
+	mid.Name = "CastPanel"
+	mid.Visible = false
+	mid.AnchorPoint = Vector2.new(1, 0.5)
+	mid.Size = UDim2.new(0, castW, 0, castH)
+	mid.Position = UDim2.new(1, -24, 0.5, 0)
+	mid.BackgroundColor3 = palette.panel
+	mid.BackgroundTransparency = 0.06
 	mid.BorderSizePixel = 0
 	mid.Parent = root
-	corner(14).Parent = mid
-	stroke(1).Parent = mid
+	corner(12).Parent = mid
+	local midStroke = stroke(1)
+	midStroke.Transparency = 0.35
+	midStroke.Parent = mid
+
+	local midShade = Instance.new("UIGradient")
+	midShade.Rotation = 90
+	midShade.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(34, 58, 78)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(22, 38, 54)),
+	})
+	midShade.Parent = mid
+
+	local castTopBar = Instance.new("Frame")
+	castTopBar.Name = "TopBar"
+	castTopBar.Size = UDim2.new(1, 0, 0, 3)
+	castTopBar.BackgroundColor3 = palette.accent
+	castTopBar.BorderSizePixel = 0
+	castTopBar.Parent = mid
+	local barGrad = Instance.new("UIGradient")
+	barGrad.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, palette.accent),
+		ColorSequenceKeypoint.new(0.5, palette.accent:Lerp(Color3.fromRGB(255, 255, 255), 0.35)),
+		ColorSequenceKeypoint.new(1, palette.accent),
+	})
+	barGrad.Rotation = 90
+	barGrad.Parent = castTopBar
+
+	local castTitle = Instance.new("TextLabel")
+	castTitle.Name = "SectionTitle"
+	castTitle.BackgroundTransparency = 1
+	castTitle.Size = UDim2.new(1, -28, 0, 16)
+	castTitle.Position = UDim2.new(0, 14, 0, 12)
+	castTitle.Font = Enum.Font.GothamBold
+	castTitle.TextSize = 13
+	castTitle.TextXAlignment = Enum.TextXAlignment.Left
+	castTitle.TextColor3 = palette.muted
+	castTitle.Text = "FISHING"
+	castTitle.Parent = mid
 
 	local castBtn = Instance.new("TextButton")
-	castBtn.Size = UDim2.new(1, -32, 0, 52)
-	castBtn.Position = UDim2.new(0, 16, 0, 20)
+	castBtn.Size = UDim2.new(1, -28, 0, 34)
+	castBtn.Position = UDim2.new(0, 14, 0, 32)
 	castBtn.BackgroundColor3 = palette.accent
-	castBtn.Text = "Cast line"
+	castBtn.AutoButtonColor = false
+	local castKeyLabel = (function()
+		local s = tostring(Config.CAST_LINE_KEYCODE)
+		return (string.match(s, "%.([^%.]+)$")) or s
+	end)()
+	castBtn.Text = "Cast line  [" .. castKeyLabel .. "]"
 	castBtn.TextColor3 = palette.bg
 	castBtn.Font = Enum.Font.GothamBold
-	castBtn.TextSize = 18
+	castBtn.TextSize = 16
 	castBtn.Parent = mid
-	corner(10).Parent = castBtn
+	corner(8).Parent = castBtn
+	local btnStroke = Instance.new("UIStroke")
+	btnStroke.Color = palette.accent:Lerp(Color3.fromRGB(255, 255, 255), 0.4)
+	btnStroke.Thickness = 1
+	btnStroke.Transparency = 0.45
+	btnStroke.Parent = castBtn
 
 	local cooldownLabel = Instance.new("TextLabel")
 	cooldownLabel.BackgroundTransparency = 1
-	cooldownLabel.Size = UDim2.new(1, -32, 0, 20)
-	cooldownLabel.Position = UDim2.new(0, 16, 0, 78)
-	cooldownLabel.Font = Enum.Font.Gotham
-	cooldownLabel.TextSize = 14
+	cooldownLabel.Size = UDim2.new(1, -28, 0, 14)
+	cooldownLabel.Position = UDim2.new(0, 14, 0, 70)
+	cooldownLabel.Font = Enum.Font.GothamMedium
+	cooldownLabel.TextSize = 12
 	cooldownLabel.TextColor3 = palette.muted
 	cooldownLabel.Text = ""
 	cooldownLabel.Parent = mid
 
 	local statusLabel = Instance.new("TextLabel")
 	statusLabel.BackgroundTransparency = 1
-	statusLabel.Size = UDim2.new(1, -32, 0, 72)
-	statusLabel.Position = UDim2.new(0, 16, 0, 108)
-	statusLabel.Font = Enum.Font.GothamMedium
-	statusLabel.TextSize = 15
+	statusLabel.Size = UDim2.new(1, -28, 0, 48)
+	statusLabel.Position = UDim2.new(0, 14, 0, 84)
+	statusLabel.Font = Enum.Font.Gotham
+	statusLabel.TextSize = 13
 	statusLabel.TextColor3 = palette.text
 	statusLabel.TextWrapped = true
-	statusLabel.Text = "Catch fish, sell them, upgrade your kit."
+	statusLabel.Text = "Sell catches in your bag, upgrade gear at the shop."
 	statusLabel.TextYAlignment = Enum.TextYAlignment.Top
+	statusLabel.LineHeight = 1.15
 	statusLabel.Parent = mid
+
+	local castBtnBase = palette.accent
+	castBtn.MouseEnter:Connect(function()
+		castBtn.BackgroundColor3 = castBtnBase:Lerp(Color3.fromRGB(255, 255, 255), 0.1)
+	end)
+	castBtn.MouseLeave:Connect(function()
+		castBtn.BackgroundColor3 = castBtnBase
+	end)
+	local function tryCastFromKeybind()
+		if not mid.Visible then
+			return
+		end
+		if UserInputService:GetFocusedTextBox() ~= nil then
+			return
+		end
+		CastFishing:FireServer()
+	end
 
 	castBtn.MouseButton1Click:Connect(function()
 		CastFishing:FireServer()
 	end)
 
+	UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessedEvent: boolean)
+		if gameProcessedEvent then
+			return
+		end
+		if input.KeyCode == Config.CAST_LINE_KEYCODE then
+			tryCastFromKeybind()
+			return
+		end
+		if
+			input.UserInputType == Enum.UserInputType.Gamepad1
+			and input.KeyCode == Enum.KeyCode.ButtonX
+		then
+			tryCastFromKeybind()
+		end
+	end)
+
+	local bagExpandedH = 260
+	local bagCollapsedH = 52
+	local bagListCollapsed = true
+
 	local invPanel = Instance.new("Frame")
-	invPanel.Size = UDim2.new(0, 360, 0, 260)
-	invPanel.Position = UDim2.new(0, 20, 1, -280)
+	invPanel.Name = "CatchBag"
+	invPanel.Visible = false
+	invPanel.AnchorPoint = Vector2.new(0, 1)
+	invPanel.Size = UDim2.new(0, 360, 0, bagCollapsedH)
+	invPanel.Position = UDim2.new(0, 8, 1, -8)
 	invPanel.BackgroundColor3 = palette.bg
 	invPanel.BackgroundTransparency = 0.12
 	invPanel.BorderSizePixel = 0
@@ -413,10 +509,27 @@ function UI.mount()
 	corner(12).Parent = invPanel
 	stroke(1).Parent = invPanel
 
+	-- Parent list first so header row (added after) is on top and gets clicks; ScrollingFrame was last before and blocked the minimize button.
+	local invList = Instance.new("ScrollingFrame")
+	invList.Name = "List"
+	invList.Size = UDim2.new(1, -24, 1, -52)
+	invList.Position = UDim2.new(0, 12, 0, 44)
+	invList.BackgroundTransparency = 1
+	invList.BorderSizePixel = 0
+	invList.ScrollBarThickness = 6
+	invList.CanvasSize = UDim2.new(0, 0, 0, 0)
+	invList.ZIndex = 0
+	invList.Parent = invPanel
+	local invLayout = Instance.new("UIListLayout")
+	invLayout.Padding = UDim.new(0, 6)
+	invLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	invLayout.Parent = invList
+
 	local invTitle = Instance.new("TextLabel")
 	invTitle.BackgroundTransparency = 1
-	invTitle.Size = UDim2.new(1, -120, 0, 26)
+	invTitle.Size = UDim2.new(1, -176, 0, 26)
 	invTitle.Position = UDim2.new(0, 14, 0, 8)
+	invTitle.ZIndex = 1
 	invTitle.Font = Enum.Font.GothamBold
 	invTitle.TextSize = 18
 	invTitle.TextXAlignment = Enum.TextXAlignment.Left
@@ -424,9 +537,28 @@ function UI.mount()
 	invTitle.Text = "Catch bag"
 	invTitle.Parent = invPanel
 
+	local collapseBagBtn = Instance.new("TextButton")
+	collapseBagBtn.Name = "CollapseBag"
+	collapseBagBtn.Size = UDim2.new(0, 32, 0, 32)
+	collapseBagBtn.Position = UDim2.new(1, -152, 0, 9)
+	collapseBagBtn.ZIndex = 2
+	collapseBagBtn.BackgroundColor3 = palette.panel
+	collapseBagBtn.BorderSizePixel = 0
+	collapseBagBtn.Text = "−"
+	collapseBagBtn.TextColor3 = palette.muted
+	collapseBagBtn.Font = Enum.Font.GothamBold
+	collapseBagBtn.TextSize = 20
+	collapseBagBtn.AutoButtonColor = false
+	collapseBagBtn.Active = true
+	collapseBagBtn.Selectable = true
+	collapseBagBtn.Parent = invPanel
+	corner(8).Parent = collapseBagBtn
+	stroke(1).Parent = collapseBagBtn
+
 	local sellBtn = Instance.new("TextButton")
 	sellBtn.Size = UDim2.new(0, 100, 0, 34)
 	sellBtn.Position = UDim2.new(1, -110, 0, 8)
+	sellBtn.ZIndex = 2
 	sellBtn.BackgroundColor3 = palette.good
 	sellBtn.BackgroundTransparency = 0.2
 	sellBtn.Text = "Sell all"
@@ -439,21 +571,22 @@ function UI.mount()
 		SellFish:FireServer()
 	end)
 
-	local invList = Instance.new("ScrollingFrame")
-	invList.Name = "List"
-	invList.Size = UDim2.new(1, -24, 1, -52)
-	invList.Position = UDim2.new(0, 12, 0, 44)
-	invList.BackgroundTransparency = 1
-	invList.BorderSizePixel = 0
-	invList.ScrollBarThickness = 6
-	invList.CanvasSize = UDim2.new(0, 0, 0, 0)
-	invList.Parent = invPanel
-	local invLayout = Instance.new("UIListLayout")
-	invLayout.Padding = UDim.new(0, 6)
-	invLayout.SortOrder = Enum.SortOrder.LayoutOrder
-	invLayout.Parent = invList
+	local function applyBagListCollapse()
+		invList.Visible = not bagListCollapsed
+		invPanel.Size = UDim2.new(0, 360, 0, bagListCollapsed and bagCollapsedH or bagExpandedH)
+		collapseBagBtn.Text = bagListCollapsed and "+" or "−"
+		collapseBagBtn.TextColor3 = bagListCollapsed and palette.accent or palette.muted
+	end
+
+	collapseBagBtn.MouseButton1Click:Connect(function()
+		bagListCollapsed = not bagListCollapsed
+		applyBagListCollapse()
+	end)
+
+	applyBagListCollapse()
 
 	local shopToggle = Instance.new("TextButton")
+	shopToggle.Visible = false
 	shopToggle.Size = UDim2.new(0, 120, 0, 40)
 	shopToggle.Position = UDim2.new(1, -140, 0, 20)
 	shopToggle.BackgroundColor3 = palette.panel
@@ -525,9 +658,137 @@ function UI.mount()
 		invList = invList,
 		shopFrame = shopFrame,
 		shopScroll = shopScroll,
+		castPanel = mid,
+		invPanel = invPanel,
+		shopToggle = shopToggle,
 	}
 
+	local lakeX = tonumber(Config.LAKE_CENTER_X) or 0
+	local lakeZ = tonumber(Config.LAKE_CENTER_Z) or 0
+	local proxStuds = tonumber(Config.FISHING_UI_PROXIMITY_STUDS) or 500
+	local proxSq = proxStuds * proxStuds
+
+	local cachedHrp: BasePart? = nil
+
+	local function horizontalDistSq(pos: Vector3): number
+		-- World Z must use lakeZ — Vector2 only has .X/.Y (no .Z); the old lakeXZ.Z was always wrong/nil.
+		local dx = pos.X - lakeX
+		local dz = pos.Z - lakeZ
+		return dx * dx + dz * dz
+	end
+
+	local function setFishingUiNearLake(near: boolean)
+		local r2 = refs
+		if not r2 then
+			return
+		end
+		r2.castPanel.Visible = near
+		r2.invPanel.Visible = near
+		r2.shopToggle.Visible = near
+		if not near then
+			r2.shopFrame.Visible = false
+		end
+	end
+
+	local function getWorldPositionForProximity(): Vector3?
+		if cachedHrp and cachedHrp.Parent then
+			return cachedHrp.Position
+		end
+		local char = player.Character
+		if not char then
+			local cam = Workspace.CurrentCamera
+			if cam then
+				return cam.CFrame.Position
+			end
+			return nil
+		end
+		local hrp = char:FindFirstChild("HumanoidRootPart")
+		if hrp and hrp:IsA("BasePart") then
+			cachedHrp = hrp
+			return hrp.Position
+		end
+		local torso = char:FindFirstChild("Torso")
+		if torso and torso:IsA("BasePart") then
+			return torso.Position
+		end
+		local upper = char:FindFirstChild("UpperTorso")
+		if upper and upper:IsA("BasePart") then
+			return upper.Position
+		end
+		local head = char:FindFirstChild("Head")
+		if head and head:IsA("BasePart") then
+			return head.Position
+		end
+		if char:IsA("Model") then
+			local pp = char.PrimaryPart
+			if pp then
+				return pp.Position
+			end
+		end
+		for _, d in char:GetDescendants() do
+			if d:IsA("BasePart") and d.Name == "HumanoidRootPart" then
+				cachedHrp = d
+				return d.Position
+			end
+		end
+		if char:IsA("Model") then
+			local ok, pos = pcall(function()
+				return char:GetPivot().Position
+			end)
+			if ok then
+				return pos
+			end
+		end
+		local cam = Workspace.CurrentCamera
+		if cam then
+			return cam.CFrame.Position
+		end
+		return nil
+	end
+
+	local function updateFishingProximity()
+		local pos = getWorldPositionForProximity()
+		if not pos then
+			setFishingUiNearLake(false)
+			return
+		end
+		setFishingUiNearLake(horizontalDistSq(pos) <= proxSq)
+	end
+
+	local function bindCharacterHrp(char: Model)
+		task.defer(function()
+			local hrp = char:WaitForChild("HumanoidRootPart", 20)
+			if hrp and hrp:IsA("BasePart") and player.Character == char then
+				cachedHrp = hrp
+			end
+			updateFishingProximity()
+		end)
+	end
+
+	RunService.Heartbeat:Connect(updateFishingProximity)
+
+	player.CharacterRemoving:Connect(function()
+		cachedHrp = nil
+	end)
+
+	player.CharacterAdded:Connect(function(char)
+		cachedHrp = nil
+		if char:IsA("Model") then
+			bindCharacterHrp(char)
+		else
+			task.defer(updateFishingProximity)
+		end
+	end)
+
+	local existing = player.Character
+	if existing and existing:IsA("Model") then
+		bindCharacterHrp(existing)
+	else
+		task.defer(updateFishingProximity)
+	end
+
 	StateSync.OnClientEvent:Connect(function(payload)
+		updateFishingProximity()
 		applyState(payload)
 	end)
 

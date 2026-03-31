@@ -55,13 +55,15 @@ function WorldBuild.build(lake: LakeInfo, openShop: RemoteEvent)
 	local plankY = topY + 0.4
 	local dockZStart = c.Z - r - 10
 	local dockX = c.X
+	local plankSpacing = 2.9
+	local plankCount = 9
 
 	local dock = Instance.new("Model")
 	dock.Name = "Dock"
 	dock.Parent = root
 
-	for i = 0, 3 do
-		local z = dockZStart + i * 2.9
+	for i = 0, plankCount - 1 do
+		local z = dockZStart + i * plankSpacing
 		local pl = part(
 			"Plank" .. tostring(i),
 			Vector3.new(8.6, 0.45, 3.2),
@@ -73,18 +75,23 @@ function WorldBuild.build(lake: LakeInfo, openShop: RemoteEvent)
 		pl.CastShadow = true
 	end
 
-	for s = -1, 1, 2 do
-		local post = part(
-			"Post" .. tostring(s),
-			Vector3.new(0.85, 5, 0.85),
-			CFrame.new(dockX + s * 1.4, plankY - 2.3, dockZStart + 4.5),
-			dock,
-			dockWood,
-			wood
-		)
-		post.Shape = Enum.PartType.Cylinder
-		post.CFrame = post.CFrame * CFrame.Angles(0, 0, math.rad(90))
+	local function addPosts(zOffset: number, suffix: string)
+		for s = -1, 1, 2 do
+			local post = part(
+				"Post" .. suffix .. tostring(s),
+				Vector3.new(0.85, 5, 0.85),
+				CFrame.new(dockX + s * 1.4, plankY - 2.3, dockZStart + zOffset),
+				dock,
+				dockWood,
+				wood
+			)
+			post.Shape = Enum.PartType.Cylinder
+			post.CFrame = post.CFrame * CFrame.Angles(0, 0, math.rad(90))
+		end
 	end
+
+	addPosts(4.5, "A")
+	addPosts(20, "B")
 
 	-- --- Shack (bait shop) ---
 	local shackPos = Vector3.new(c.X - 58, topY + 4, c.Z - r - 36)

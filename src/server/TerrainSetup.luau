@@ -2,6 +2,8 @@
 -- Grassy plain + flat circular lake using Terrain:FillCylinder (short cylinder = flat disk, not a sphere).
 
 local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 
 export type LakeInfo = {
 	center: Vector3,
@@ -15,8 +17,9 @@ local TerrainSetup = {}
 function TerrainSetup.build(): LakeInfo
 	local terrain = Workspace.Terrain
 
-	local lakeX = 168
-	local lakeZ = 102
+	-- Same XZ as `Config.LAKE_CENTER_*` (client fishing UI proximity uses those values).
+	local lakeX = Config.LAKE_CENTER_X
+	local lakeZ = Config.LAKE_CENTER_Z
 	-- Circle: keep rock/sand/water radii close to the carve so there’s no empty “moat” between land and water.
 	local carveRadius = 152
 	local waterRadius = 150

@@ -30,6 +30,15 @@ local Config = {}
 
 Config.GAME_NAME = "Ready Or Knot"
 
+-- Lake hub on XZ; `TerrainSetup` reads these (single source of truth). Y is not used for the fishing UI gate.
+Config.LAKE_CENTER_X = 168
+Config.LAKE_CENTER_Z = 102
+-- Cast / catch / shop: horizontal radius from that XZ point (studs), not water voxels — `horizontalDistSq <= radius^2`.
+Config.FISHING_UI_PROXIMITY_STUDS = 180
+
+-- Client: keyboard to cast while the fishing panel is visible (Gamepad1 `ButtonX` is also bound in UI).
+Config.CAST_LINE_KEYCODE = Enum.KeyCode.F
+
 Config.GEN_A_BASE_CHANCE = 0.03
 
 Config.BASE_CAST_COOLDOWN = 3
