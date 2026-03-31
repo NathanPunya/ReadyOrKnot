@@ -6,6 +6,24 @@
     "ReplicatedStorage": {
       "Shared": {
         "$path": "src/shared"
+      },
+      "Remotes": {
+        "$className": "Folder",
+        "CastFishing": {
+          "$className": "RemoteEvent"
+        },
+        "SellFish": {
+          "$className": "RemoteEvent"
+        },
+        "PurchaseItem": {
+          "$className": "RemoteEvent"
+        },
+        "StateSync": {
+          "$className": "RemoteEvent"
+        },
+        "OpenShop": {
+          "$className": "RemoteEvent"
+        }
       }
     },
 
@@ -26,28 +44,6 @@
     "Workspace": {
       "$properties": {
         "FilteringEnabled": true
-      },
-      "Baseplate": {
-        "$className": "Part",
-        "$properties": {
-          "Anchored": true,
-          "Color": [
-            0.38823,
-            0.37254,
-            0.38823
-          ],
-          "Locked": true,
-          "Position": [
-            0,
-            -10,
-            0
-          ],
-          "Size": [
-            512,
-            20,
-            512
-          ]
-        }
       }
     },
     "Lighting": {
