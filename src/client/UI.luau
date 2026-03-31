@@ -58,7 +58,6 @@ local refs: {
 	shopScroll: ScrollingFrame,
 	castPanel: Frame,
 	invPanel: Frame,
-	shopToggle: TextButton,
 }?
 
 local lastCooldownEnd = 0
@@ -384,21 +383,6 @@ function UI.mount()
 	})
 	midShade.Parent = mid
 
-	local castTopBar = Instance.new("Frame")
-	castTopBar.Name = "TopBar"
-	castTopBar.Size = UDim2.new(1, 0, 0, 3)
-	castTopBar.BackgroundColor3 = palette.accent
-	castTopBar.BorderSizePixel = 0
-	castTopBar.Parent = mid
-	local barGrad = Instance.new("UIGradient")
-	barGrad.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, palette.accent),
-		ColorSequenceKeypoint.new(0.5, palette.accent:Lerp(Color3.fromRGB(255, 255, 255), 0.35)),
-		ColorSequenceKeypoint.new(1, palette.accent),
-	})
-	barGrad.Rotation = 90
-	barGrad.Parent = castTopBar
-
 	local castTitle = Instance.new("TextLabel")
 	castTitle.Name = "SectionTitle"
 	castTitle.BackgroundTransparency = 1
@@ -498,7 +482,7 @@ function UI.mount()
 
 	local invPanel = Instance.new("Frame")
 	invPanel.Name = "CatchBag"
-	invPanel.Visible = false
+	invPanel.Visible = true
 	invPanel.AnchorPoint = Vector2.new(0, 1)
 	invPanel.Size = UDim2.new(0, 360, 0, bagCollapsedH)
 	invPanel.Position = UDim2.new(0, 8, 1, -8)
@@ -585,19 +569,6 @@ function UI.mount()
 
 	applyBagListCollapse()
 
-	local shopToggle = Instance.new("TextButton")
-	shopToggle.Visible = false
-	shopToggle.Size = UDim2.new(0, 120, 0, 40)
-	shopToggle.Position = UDim2.new(1, -140, 0, 20)
-	shopToggle.BackgroundColor3 = palette.panel
-	shopToggle.Text = "Shop"
-	shopToggle.TextColor3 = palette.text
-	shopToggle.Font = Enum.Font.GothamBold
-	shopToggle.TextSize = 16
-	shopToggle.Parent = root
-	corner(8).Parent = shopToggle
-	stroke(1).Parent = shopToggle
-
 	local shopFrame = Instance.new("Frame")
 	shopFrame.Size = UDim2.new(0, 420, 0, 420)
 	shopFrame.Position = UDim2.new(0.5, -210, 0.5, -210)
@@ -643,10 +614,6 @@ function UI.mount()
 	shopScroll.ScrollBarThickness = 6
 	shopScroll.Parent = shopFrame
 
-	shopToggle.MouseButton1Click:Connect(function()
-		shopFrame.Visible = not shopFrame.Visible
-	end)
-
 	refs = {
 		money = money,
 		level = level,
@@ -660,7 +627,6 @@ function UI.mount()
 		shopScroll = shopScroll,
 		castPanel = mid,
 		invPanel = invPanel,
-		shopToggle = shopToggle,
 	}
 
 	local lakeX = tonumber(Config.LAKE_CENTER_X) or 0
@@ -683,11 +649,7 @@ function UI.mount()
 			return
 		end
 		r2.castPanel.Visible = near
-		r2.invPanel.Visible = near
-		r2.shopToggle.Visible = near
-		if not near then
-			r2.shopFrame.Visible = false
-		end
+		-- Catch bag + shop button (and open shop window) are not gated by lake proximity.
 	end
 
 	local function getWorldPositionForProximity(): Vector3?
