@@ -18,8 +18,8 @@ function TerrainSetup.build(): LakeInfo
 	local lakeX = 168
 	local lakeZ = 102
 	-- Circle: keep rock/sand/water radii close to the carve so there’s no empty “moat” between land and water.
-	local carveRadius = 144
-	local waterRadius = 139
+	local carveRadius = 152
+	local waterRadius = 147
 
 	local plainSize = 920
 	local plainHeight = 16
@@ -40,8 +40,25 @@ function TerrainSetup.build(): LakeInfo
 	-- Flat circular floor layers — radii nearly match the hole so the shore meets the grass.
 	terrain:FillCylinder(CFrame.new(lakeX, -10, lakeZ), 12, carveRadius - 2, Enum.Material.Rock)
 	terrain:FillCylinder(CFrame.new(lakeX, -3.5, lakeZ), 8, carveRadius - 1, Enum.Material.Sand)
-	-- Shallow water disk (small height = flat surface).
-	terrain:FillCylinder(CFrame.new(lakeX, 4.5, lakeZ), 9, waterRadius, Enum.Material.Water)
+
+	--[[ Water column
+	    API: Terrain:FillCylinder(cframe, height, radius, material)  — height FIRST, then radius.
+	    If you swap them, ~147 is used as HEIGHT → giant vertical pillar and broken terrain.
+	    Never use waterRadius as the CFrame Y (that would center the lake hundreds of studs up).
+
+	    Anchor the bottom of the water to the lake bed; only the top moves when you raise waterHeight.
+	]]
+	local waterBottomY = 1
+	local waterHeight = 14
+	local maxWaterSurfaceY = plainTopY + 0.5
+	local waterSurfaceY = waterBottomY + waterHeight
+	if waterSurfaceY > maxWaterSurfaceY then
+		waterHeight = math.max(4, maxWaterSurfaceY - waterBottomY)
+		waterSurfaceY = waterBottomY + waterHeight
+	end
+	local waterCenterY = waterBottomY + waterHeight * 0.5
+
+	terrain:FillCylinder(CFrame.new(lakeX, waterCenterY, lakeZ), waterHeight, waterRadius, Enum.Material.Water)
 
 	pcall(function()
 		local anyTerrain = terrain :: any
