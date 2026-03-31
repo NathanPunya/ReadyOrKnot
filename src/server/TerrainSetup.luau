@@ -19,7 +19,7 @@ function TerrainSetup.build(): LakeInfo
 	local lakeZ = 102
 	-- Circle: keep rock/sand/water radii close to the carve so there’s no empty “moat” between land and water.
 	local carveRadius = 152
-	local waterRadius = 147
+	local waterRadius = 150
 
 	local plainSize = 920
 	local plainHeight = 16
@@ -40,6 +40,9 @@ function TerrainSetup.build(): LakeInfo
 	-- Flat circular floor layers — radii nearly match the hole so the shore meets the grass.
 	terrain:FillCylinder(CFrame.new(lakeX, -10, lakeZ), 12, carveRadius - 2, Enum.Material.Rock)
 	terrain:FillCylinder(CFrame.new(lakeX, -3.5, lakeZ), 8, carveRadius - 1, Enum.Material.Sand)
+	-- Shallow sand shelf (extra layer) so the slope toward the wet shore isn’t one flat tone.
+	local sandShelfRadius = math.min(carveRadius - 2, waterRadius + 9)
+	terrain:FillCylinder(CFrame.new(lakeX, -0.5, lakeZ), 9, sandShelfRadius, Enum.Material.Sand)
 
 	--[[ Water column
 	    API: Terrain:FillCylinder(cframe, height, radius, material)  — height FIRST, then radius.
@@ -58,6 +61,8 @@ function TerrainSetup.build(): LakeInfo
 	end
 	local waterCenterY = waterBottomY + waterHeight * 0.5
 
+	-- Open water only here. Do not stack Mud then Water: on many builds the mud voxels stay on top and hide water.
+	-- Shore band = the wider sand layers above + rock/sand bed; wet edge is sand meeting water.
 	terrain:FillCylinder(CFrame.new(lakeX, waterCenterY, lakeZ), waterHeight, waterRadius, Enum.Material.Water)
 
 	pcall(function()
