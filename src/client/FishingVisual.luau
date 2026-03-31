@@ -461,16 +461,20 @@ local function playCast(): boolean
 		local tipPos = tipAtt.WorldPosition
 		local speed = vel.Magnitude
 		local targetSettle = 0
-		if wet and speed < 15 and t > 0.28 then
+		-- ~2s lead: pretend the cast timeline is further along so the curve can shift before the hook has fully settled.
+		local CURVE_SETTLE_LEAD_SEC = 2
+		local tEff = t + CURVE_SETTLE_LEAD_SEC
+		-- In water: allow blend while still moving (entry/splash); tEff makes time gates pass ~2s earlier.
+		if wet and speed < 42 and tEff > 0.05 then
 			targetSettle = 1
-		elseif speed < 3.5 and t > 0.5 then
+		elseif speed < 11 and tEff > 0.12 then
 			targetSettle = 1
 		end
-		if speed > 28 or (t < 0.2 and speed > 14) then
+		-- Don’t fight the lead: only force “cast” curve during hard launch in air, or extreme flight speed above water.
+		if (speed > 48 and not wet) or (t < 0.04 and speed > 20) then
 			targetSettle = 0
 		end
-		-- Lower = slower approach to settled curve (exponential smoothing).
-		settleAlpha += (targetSettle - settleAlpha) * math.min(1, dt * 0.65)
+		settleAlpha += (targetSettle - settleAlpha) * math.min(1, dt * 1.35)
 		local curveBlend = smoothstep01(settleAlpha)
 
 		alignBeamAttachmentsForGravitySag(shaft, tipAtt, hook, hookAtt, tipPos, pos)
