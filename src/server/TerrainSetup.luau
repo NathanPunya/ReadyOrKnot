@@ -17,9 +17,9 @@ function TerrainSetup.build(): LakeInfo
 
 	local lakeX = 168
 	local lakeZ = 102
-	-- Circle: carve radius slightly larger than water so the shore is grass → sand/rock → water.
-	local carveRadius = 138
-	local waterRadius = 126
+	-- Circle: keep rock/sand/water radii close to the carve so there’s no empty “moat” between land and water.
+	local carveRadius = 144
+	local waterRadius = 139
 
 	local plainSize = 920
 	local plainHeight = 16
@@ -37,9 +37,9 @@ function TerrainSetup.build(): LakeInfo
 	-- Vertical cylinders: axis is CFrame.Y (default). Tall Air = circular cut through the grass.
 	terrain:FillCylinder(CFrame.new(lakeX, 2, lakeZ), 34, carveRadius, Enum.Material.Air)
 
-	-- Flat circular floor layers (thin cylinders — reads as a pond bottom, not a column).
-	terrain:FillCylinder(CFrame.new(lakeX, -10, lakeZ), 12, carveRadius - 5, Enum.Material.Rock)
-	terrain:FillCylinder(CFrame.new(lakeX, -3.5, lakeZ), 8, carveRadius - 8, Enum.Material.Sand)
+	-- Flat circular floor layers — radii nearly match the hole so the shore meets the grass.
+	terrain:FillCylinder(CFrame.new(lakeX, -10, lakeZ), 12, carveRadius - 2, Enum.Material.Rock)
+	terrain:FillCylinder(CFrame.new(lakeX, -3.5, lakeZ), 8, carveRadius - 1, Enum.Material.Sand)
 	-- Shallow water disk (small height = flat surface).
 	terrain:FillCylinder(CFrame.new(lakeX, 4.5, lakeZ), 9, waterRadius, Enum.Material.Water)
 
