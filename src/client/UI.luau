@@ -8,6 +8,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Progression = require(Shared:WaitForChild("Progression"))
+local FishingVisual = require(script.Parent:WaitForChild("FishingVisual"))
+local CameraView = require(script.Parent:WaitForChild("CameraView"))
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local CastFishing = Remotes:WaitForChild("CastFishing") :: RemoteEvent
@@ -292,6 +294,55 @@ function UI.mount()
 	root.BackgroundTransparency = 1
 	root.Parent = gui
 
+	-- Center crosshair: casting uses a viewport ray through this point (see FishingVisual).
+	local crosshair = Instance.new("Frame")
+	crosshair.Name = "CastCrosshair"
+	crosshair.AnchorPoint = Vector2.new(0.5, 0.5)
+	crosshair.Position = UDim2.new(0.5, 0, 0.5, 0)
+	crosshair.Size = UDim2.new(0, 28, 0, 28)
+	crosshair.BackgroundTransparency = 1
+	crosshair.BorderSizePixel = 0
+	crosshair.ZIndex = 100
+	crosshair.Parent = root
+
+	local function crosshairLine(size: UDim2, pos: UDim2)
+		local f = Instance.new("Frame")
+		f.AnchorPoint = Vector2.new(0.5, 0.5)
+		f.Position = pos
+		f.Size = size
+		f.BackgroundColor3 = Color3.fromRGB(235, 245, 250)
+		f.BackgroundTransparency = 0.15
+		f.BorderSizePixel = 0
+		f.Parent = crosshair
+		local s = Instance.new("UIStroke")
+		s.Thickness = 1
+		s.Color = Color3.fromRGB(12, 24, 36)
+		s.Transparency = 0.35
+		s.Parent = f
+		return f
+	end
+
+	crosshairLine(UDim2.new(0, 22, 0, 2), UDim2.new(0.5, 0, 0.5, 0))
+	crosshairLine(UDim2.new(0, 2, 0, 22), UDim2.new(0.5, 0, 0.5, 0))
+
+	local crossDot = Instance.new("Frame")
+	crossDot.AnchorPoint = Vector2.new(0.5, 0.5)
+	crossDot.Position = UDim2.new(0.5, 0, 0.5, 0)
+	crossDot.Size = UDim2.new(0, 4, 0, 4)
+	crossDot.BackgroundColor3 = palette.accent
+	crossDot.BackgroundTransparency = 0.1
+	crossDot.BorderSizePixel = 0
+	crossDot.ZIndex = 2
+	crossDot.Parent = crosshair
+	local dotC = Instance.new("UICorner")
+	dotC.CornerRadius = UDim.new(1, 0)
+	dotC.Parent = crossDot
+
+	crosshair.Visible = false
+	RunService.RenderStepped:Connect(function()
+		crosshair.Visible = CameraView.isFirstPerson()
+	end)
+
 	-- Top HUD card: half the width of a full-bleed bar with the same total L+R margin budget, centered.
 	local topPadL = 56
 	local topPadR = 20
@@ -446,33 +497,31 @@ function UI.mount()
 	castBtn.MouseLeave:Connect(function()
 		castBtn.BackgroundColor3 = castBtnBase
 	end)
-	local function tryCastFromKeybind()
-		if not mid.Visible then
-			return
-		end
+	local function fireCast()
 		if UserInputService:GetFocusedTextBox() ~= nil then
 			return
 		end
-		CastFishing:FireServer()
+		-- Camera-aimed cast; second press reels in without firing the server again.
+		if FishingVisual.performCastOrReel() then
+			CastFishing:FireServer()
+		end
 	end
 
-	castBtn.MouseButton1Click:Connect(function()
-		CastFishing:FireServer()
-	end)
+	castBtn.MouseButton1Click:Connect(fireCast)
 
 	UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessedEvent: boolean)
 		if gameProcessedEvent then
 			return
 		end
 		if input.KeyCode == Config.CAST_LINE_KEYCODE then
-			tryCastFromKeybind()
+			fireCast()
 			return
 		end
 		if
 			input.UserInputType == Enum.UserInputType.Gamepad1
 			and input.KeyCode == Enum.KeyCode.ButtonX
 		then
-			tryCastFromKeybind()
+			fireCast()
 		end
 	end)
 
@@ -604,6 +653,11 @@ function UI.mount()
 	closeShop.MouseButton1Click:Connect(function()
 		shopFrame.Visible = false
 	end)
+
+	shopFrame:GetPropertyChangedSignal("Visible"):Connect(function()
+		CameraView.setShopModalOpen(shopFrame.Visible)
+	end)
+	CameraView.setShopModalOpen(false)
 
 	local shopScroll = Instance.new("ScrollingFrame")
 	shopScroll.Name = "ShopScroll"
