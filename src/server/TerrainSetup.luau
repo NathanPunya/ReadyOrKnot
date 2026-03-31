@@ -4,6 +4,7 @@
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local PhotorealLighting = require(script.Parent:WaitForChild("PhotorealLighting"))
 
 export type LakeInfo = {
 	center: Vector3,
@@ -64,54 +65,36 @@ function TerrainSetup.build(): LakeInfo
 	end
 	local waterCenterY = waterBottomY + waterHeight * 0.5
 
+	-- Do not add a full-radius surface Sand disk before Water: overlapping Sand voxels are not reliably replaced
+	-- by Water, so the lake can end up all sand. Shore tone comes from the deeper sand/rock fills + reeds in `LakeDecor`.
+
 	-- Open water only here. Do not stack Mud then Water: on many builds the mud voxels stay on top and hide water.
 	-- Shore band = the wider sand layers above + rock/sand bed; wet edge is sand meeting water.
 	terrain:FillCylinder(CFrame.new(lakeX, waterCenterY, lakeZ), waterHeight, waterRadius, Enum.Material.Water)
 
 	pcall(function()
-		local anyTerrain = terrain :: any
-		if anyTerrain.GrassLength ~= nil then
-			anyTerrain.GrassLength = 0.95
+		local tr = terrain :: any
+		if tr.WaterWaveSpeed ~= nil then
+			tr.WaterWaveSpeed = 2.8
+		end
+		if tr.WaterReflectance ~= nil then
+			tr.WaterReflectance = 0.42
 		end
 	end)
 
-	local lighting = game:GetService("Lighting")
-	lighting.ClockTime = 17
-	lighting.GeographicLatitude = 15
-	lighting.Ambient = Color3.fromRGB(130, 148, 125)
-	lighting.OutdoorAmbient = Color3.fromRGB(118, 136, 112)
-	lighting.Brightness = 2.15
-	lighting.EnvironmentDiffuseScale = 0.48
-	lighting.EnvironmentSpecularScale = 0.58
-
-	local atmosphere = lighting:FindFirstChildOfClass("Atmosphere")
-	if not atmosphere then
-		atmosphere = Instance.new("Atmosphere")
-		atmosphere.Parent = lighting
-	end
-	atmosphere.Density = 0.3
-	atmosphere.Offset = 0.1
-	atmosphere.Color = Color3.fromRGB(175, 210, 225)
-	atmosphere.Decay = Color3.fromRGB(135, 165, 185)
-	atmosphere.Glare = 0.16
-	atmosphere.Haze = 0.6
-
-	for _, child in Workspace:GetChildren() do
-		if child:IsA("SpawnLocation") and child.Name == "DockSpawn" then
-			child:Destroy()
+	-- `Terrain.GrassLength` is documented but often ineffective from server scripts / varies by session.
+	-- For reliably “short” grass from code: turn off 3D blades (flat Grass material). For tall blades + length,
+	-- enable Decoration in Studio (Home → Terrain) and set grass length there.
+	pcall(function()
+		local anyTerrain = terrain :: any
+		if anyTerrain.Decoration ~= nil then
+			anyTerrain.Decoration = false
 		end
-	end
+	end)
 
-	local spawn = Instance.new("SpawnLocation")
-	spawn.Name = "DockSpawn"
-	spawn.Size = Vector3.new(14, 1, 14)
-	spawn.CFrame = CFrame.new(42, plainTopY + 2, -118) * CFrame.Angles(0, math.rad(55), 0)
-	spawn.Anchored = true
-	spawn.Neutral = true
-	spawn.Duration = 0
-	spawn.TeamColor = BrickColor.new("Bright blue")
-	spawn.Transparency = 1
-	spawn.Parent = Workspace
+	PhotorealLighting.apply()
+
+	-- Player spawn is built in `WorldBuild` (dock landing + invisible SpawnLocation).
 
 	return {
 		center = lakeCenter,

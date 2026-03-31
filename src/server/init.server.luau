@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- Terrain runs first so it always generates even if another module fails to load later.
 local TerrainSetup = require(script:WaitForChild("TerrainSetup"))
 local WorldBuild = require(script:WaitForChild("WorldBuild"))
+local LakeDecor = require(script:WaitForChild("LakeDecor"))
 
 local lakeInfo: any = nil
 local terrainOk, terrainErr = pcall(function()
@@ -17,6 +18,7 @@ if terrainOk then
 	if lakeInfo then
 		local openShop = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("OpenShop") :: RemoteEvent
 		WorldBuild.build(lakeInfo, openShop)
+		LakeDecor.build(lakeInfo)
 	end
 else
 	warn("[ReadyOrKnot] Terrain failed:", terrainErr)
